@@ -1,0 +1,49 @@
+{
+  "name": "infomaulid-bot",
+  "version": "1.0.0",
+  "description": "InfoMaulid Telegram bot — extract event poster info, generate BM copywriting, admin review, then publish to Telegram & WhatsApp.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "smoke": "npm run build && node scripts/smoke.mjs",
+    "postinstall": "node scripts/patch-baileys-newsletter.js || true",
+    "patch:baileys": "node scripts/patch-baileys-newsletter.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:restart": "pm2 restart infomaulid-bot",
+    "pm2:stop": "pm2 stop infomaulid-bot",
+    "pm2:logs": "pm2 logs infomaulid-bot",
+    "pm2:status": "pm2 status"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "infomaulid",
+    "gemini"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "grammy": "^1.35.0",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.4",
+    "@types/qrcode": "^1.5.6",
+    "@types/qrcode-terminal": "^0.12.2",
+    "pm2": "^7.0.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
