@@ -57,7 +57,6 @@ export async function handleWhatsAppPosterInput(
     });
 
     logger.info(`Created submission #${submission.id} from WhatsApp ${message.fromPhone}`);
-    void processSubmissionPipeline(bot, submission.id);
 
     // Only send auto-reply if within rate limit
     if (shouldSendReply(message.fromPhone)) {
@@ -66,6 +65,17 @@ export async function handleWhatsAppPosterInput(
     } else {
       logger.info(`Auto-reply skipped for ${message.fromPhone} (rate limited)`);
     }
+
+    // Process the pipeline in background but log errors
+    processSubmissionPipeline(bot, submission.id).catch((error) => {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`Pipeline failed for submission #${submission.id}`, errMsg);
+      // Notify user of failure if it hasn't been approved yet
+      void notifyWhatsAppSubmitter(
+        message.fromPhone,
+        `Maaf, pemprosesan poster anda gagal: ${errMsg}. Sila cuba hantar semula.`,
+      );
+    });
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     logger.error("Failed to accept WhatsApp poster", errMsg);
