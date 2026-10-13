@@ -99,13 +99,27 @@ export async function extractEventInfoFromPoster(
   userText?: string | null,
 ): Promise<ExtractedEventInfo> {
   const gemini = getGemini();
-  const model = gemini.getGenerativeModel({
-    model: config.geminiVisionModel,
-    generationConfig: {
-      temperature: 0,
-      responseMimeType: "application/json",
-    },
-  });
+  
+  // Try primary model, fallback to simpler model if fails
+  let model;
+  try {
+    model = gemini.getGenerativeModel({
+      model: config.geminiVisionModel,
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json",
+      },
+    });
+  } catch (error) {
+    logger.warn(`Failed to load model ${config.geminiVisionModel}, trying gemini-1.5-flash`, error);
+    model = gemini.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json",
+      },
+    });
+  }
 
   const prompt = [
     "You classify and extract details from poster images for InfoMaulid (Islamic event channel).",
@@ -140,17 +154,24 @@ export async function extractEventInfoFromPoster(
 
   const imageBase64 = fs.readFileSync(posterPath).toString("base64");
 
-  logger.info("Calling Gemini Vision for event extraction");
+  logger.info("Calling Gemini Vision for event extraction", { model: config.geminiVisionModel });
 
-  const response = await model.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        mimeType: guessMime(posterPath),
-        data: imageBase64,
+  let response;
+  try {
+    response = await model.generateContent([
+      { text: prompt },
+      {
+        inlineData: {
+          mimeType: guessMime(posterPath),
+          data: imageBase64,
+        },
       },
-    },
-  ]);
+    ]);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Gemini Vision API call failed", errMsg);
+    throw new Error(`Gemini API error: ${errMsg}`);
+  }
 
   const content = response.response.text();
   if (!content?.trim()) {
@@ -161,6 +182,7 @@ export async function extractEventInfoFromPoster(
   try {
     parsed = JSON.parse(stripCodeFences(content));
   } catch {
+    logger.error("Gemini Vision returned invalid JSON", { content: content.substring(0, 200) });
     throw new Error("Gemini Vision returned invalid JSON");
   }
 
